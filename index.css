@@ -1,0 +1,19 @@
+body {
+  margin: 0;
+}
+
+#container {
+  position: absolute;
+}
+
+canvas {
+  position: absolute;
+}
+
+#gridCanvas {
+  z-index: 1;
+}
+
+#gameCanvas {
+  z-index: 2;
+}
