@@ -1,35 +1,49 @@
 const LIVE = "LIVE";
 const DEAD = "DEAD";
+const WIDTH = window.innerWidth;
+const HEIGHT = window.innerHeight;
 
 class Square {
   constructor(posX, posY) {
-    this.state = LIVE;
+    this.state = DEAD;
     this.posX = posX;
     this.posY = posY;
-    this.green = "rgb(3, 160, 98)";
     this.neighbours = [];
   }
 
-  isNeighbour(otherX, otherY) {
-    if (
-      Math.abs(this.posX - otherX) <= 1 &&
-      Math.abs(this.posY - otherY) <= 1
-    ) {
-      return true;
-    } else {
-      return false;
-    }
+  getIndex(x, y, size) {
+    return y * (WIDTH / size) + x;
   }
 
-  detectNeighbours(array, size) {
-    this.neighbours = [];
-    for (let other of array) {
-      if (this.posX !== other.posX || this.posY !== other.posY) {
-        if (this.isNeighbour(other.posX, other.posY)) {
-          this.neighbours.push(other);
-        }
+  getNeighbours(cellArray, cellSize) {
+    const returnArray = [];
+
+    const indices = [
+      [-1, -1],
+      [0, -1],
+      [1, -1],
+      [-1, 0],
+      [1, 0],
+      [-1, 1],
+      [0, 1],
+      [1, 1],
+    ];
+
+    for (let i = 0; i < indices.length; i++) {
+      let otherX = this.posX + indices[i][0];
+      let otherY = this.posY + indices[i][1];
+
+      if (
+        otherX >= 0 &&
+        otherX < Math.floor(WIDTH / cellSize) &&
+        otherY >= 0 &&
+        otherY < Math.floor(HEIGHT / cellSize)
+      ) {
+        returnArray.push(cellArray[this.getIndex(otherX, otherY, cellSize)]);
       }
     }
+
+    this.neighbours = returnArray;
   }
 }
 
@@ -40,30 +54,30 @@ class Game {
     this.black = "rgb(0, 0, 0)";
     this.white = "rgb(255, 255, 255)";
     this.green = "rgb(3, 160, 98)";
-    this.width = window.innerWidth;
-    this.height = window.innerHeight;
     this.canvas = document.getElementById("gameCanvas");
-    this.canvas.width = this.width;
-    this.canvas.height = this.height;
+    this.canvas.width = WIDTH;
+    this.canvas.height = HEIGHT;
     this.context = this.canvas.getContext("2d");
-    this.grid = document.getElementById("gridCanvas");
-    this.grid.width = this.width;
-    this.grid.height = this.height;
-    this.gridContext = this.grid.getContext("2d");
-    this.squares = [];
-    this.initialSquares = initialSquares;
+    this.squaresAdded = [];
+    this.squaresRemoved = [];
+    this.cells = this.createCells(initialSquares);
   }
 
   drawGrid() {
-    this.gridContext.beginPath();
+    const grid = document.getElementById("gridCanvas");
+    grid.width = WIDTH;
+    grid.height = HEIGHT;
+    const gridContext = grid.getContext("2d");
 
-    this.gridContext.fillStyle = this.black;
-    this.gridContext.fillRect(0, 0, this.width, this.height);
+    gridContext.beginPath();
 
-    this.gridContext.strokeStyle = this.green;
-    for (let i = 0; i < Math.ceil(this.width / this.cellSize); i++) {
-      for (let j = 0; j < Math.ceil(this.height / this.cellSize); j++) {
-        this.gridContext.strokeRect(
+    gridContext.fillStyle = this.black;
+    gridContext.fillRect(0, 0, WIDTH, HEIGHT);
+
+    gridContext.strokeStyle = this.green;
+    for (let i = 0; i < Math.ceil(WIDTH / this.cellSize); i++) {
+      for (let j = 0; j < Math.ceil(HEIGHT / this.cellSize); j++) {
+        gridContext.strokeRect(
           i * this.cellSize,
           j * this.cellSize,
           this.cellSize,
@@ -72,93 +86,103 @@ class Game {
       }
     }
 
-    this.gridContext.closePath();
+    gridContext.closePath();
   }
 
   clearCanvas() {
     this.context.beginPath();
-    this.context.clearRect(0, 0, this.width, this.height);
+    this.context.clearRect(0, 0, WIDTH, HEIGHT);
     this.context.closePath();
   }
 
-  createSquares() {
-    for (let i = 0; i < this.initialSquares - this.squares.length; i++) {
-      const newSquare = new Square(
-        Math.round(Math.random() * (this.width / this.cellSize)),
-        Math.round(Math.random() * (this.height / this.cellSize))
-      );
+  createCells(initial) {
+    const returnArray = [];
+    let squareIndices = [];
 
-      for (let square of this.squares) {
-        if (square.posX === newSquare.posX && square.posY === newSquare.posY) {
-          newSquare.state = DEAD;
-        }
-      }
-
-      if (newSquare.state === LIVE) {
-        this.squares.push(newSquare);
+    for (let y = 0; y < Math.ceil(HEIGHT / this.cellSize); y++) {
+      for (let x = 0; x < Math.ceil(WIDTH / this.cellSize); x++) {
+        returnArray.push(new Square(x, y));
       }
     }
+
+    const totalCells = returnArray.length;
+
+    for (let i = 0; i < initial; i++) {
+      let index = Math.round(Math.random() * totalCells);
+      if (squareIndices.includes(index)) {
+        index = Math.round(Math.random() * totalCells);
+      }
+
+      squareIndices.push(index);
+    }
+
+    squareIndices = Array.from(new Set(squareIndices));
+
+    returnArray.forEach((square, index) => {
+      square.getNeighbours(returnArray, this.cellSize);
+
+      if (squareIndices.includes(index)) {
+        square.state = LIVE;
+        this.squaresAdded.push(square);
+      }
+    });
+
+    return returnArray;
   }
 
   drawSquares() {
     this.context.beginPath();
+    this.context.fillStyle = this.green;
 
-    for (let square of this.squares) {
-      this.context.fillStyle = this.green;
+    this.squaresAdded.forEach((square) => {
       this.context.fillRect(
         square.posX * this.cellSize,
         square.posY * this.cellSize,
         this.cellSize,
         this.cellSize
       );
-    }
+    });
 
-    this.context.closePath();
+    this.squaresAdded = [];
+
+    this.squaresRemoved.forEach((square) => {
+      this.context.clearRect(
+        square.posX * this.cellSize,
+        square.posY * this.cellSize,
+        this.cellSize,
+        this.cellSize
+      );
+    });
+
+    this.squareRemoved = [];
   }
 
   updateSquares() {
-    /*
+    const liveSquares = this.cells.filter((cell) => {
+      return cell.state === LIVE;
+    });
 
-    Add code to triangulate new squares
-    Certain patterns?
+    for (let square of liveSquares) {
+      square.getNeighbours(this.cells, this.cellSize);
 
-    For square;
-    - Get all neighbours within 2 squares
+      const totalNeighbours = square.neighbours.filter((neighbour) => {
+        neighbour.state === LIVE;
+      });
 
-    */
-
-    for (let square of this.squares) {
-      square.detectNeighbours(this.squares);
-
-      if (square.neighbours.length > 3 || square.neighbours.length < 2) {
+      if (totalNeighbours < 2 || totalNeighbours > 3) {
         square.state = DEAD;
       }
     }
-
-    /* 
-
-    Remove section below
-
-    Instead;
-    - Mark squares LIVE or DEAD
-    - In drawSquares()
-      - Draw fillRect if square is LIVE
-      - Draw clearRect if square is DEAD, remove from this.squares
-
-    */
-
-    const liveSquares = this.squares.filter((square) => {
-      return square.state === LIVE;
-    });
-
-    this.squares = liveSquares;
   }
 
   gameLoop() {
-    this.clearCanvas();
     this.drawSquares();
 
-    if (this.squares.length === 0) {
+    if (
+      this.cells.filter((cell) => {
+        return cell.state === DEAD;
+      }).length === 0
+    ) {
       clearInterval(this.running);
     }
 
@@ -167,7 +191,7 @@ class Game {
 
   run() {
     this.drawGrid();
-    this.createSquares();
+    this.createCells();
 
     this.running = setInterval(() => {
       this.gameLoop();
@@ -175,5 +199,25 @@ class Game {
   }
 }
 
-const game = new Game(1, 10, 2000);
+const game = new Game(1, 10, 1000);
 game.run();
+
+/*
+
+Get Square from Index
+  y = Math.floor(index / screenWidth)
+  x = index % screenWidth
+
+get Index from Square
+  (y / cellSize * screenWidth) + (x / cellSize)
+
+Two lists in game
+- All cells (organised x -> Lx, for each y)
+- liveSquares
+
+On update;
+
+For square in liveSquares
+  check all dead neighbours for 3+ neighbours
+
+  */
