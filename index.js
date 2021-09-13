@@ -12,19 +12,22 @@ class Square {
 
   isNeighbour(otherX, otherY) {
     if (
-      Math.abs(this.posX - otherX) === 1 &&
-      Math.abs(this.posY - otherY) === 1
+      Math.abs(this.posX - otherX) <= 1 &&
+      Math.abs(this.posY - otherY) <= 1
     ) {
       return true;
+    } else {
+      return false;
     }
   }
 
-  detectNeighbours(array) {
-    // not working as it should
-
+  detectNeighbours(array, size) {
+    this.neighbours = [];
     for (let other of array) {
-      if (this.isNeighbour(other.posX, other.posY)) {
-        this.neighbours.push(other);
+      if (this.posX !== other.posX || this.posY !== other.posY) {
+        if (this.isNeighbour(other.posX, other.posY)) {
+          this.neighbours.push(other);
+        }
       }
     }
   }
@@ -79,14 +82,21 @@ class Game {
   }
 
   createSquares() {
-    for (let i = 0; i < this.initialSquares; i++) {
-      const posX =
-        Math.round(Math.random() * (this.width / this.cellSize)) *
-        this.cellSize;
-      const posY =
-        Math.round(Math.random() * (this.height / this.cellSize)) *
-        this.cellSize;
-      this.squares.push(new Square(posX, posY));
+    for (let i = 0; i < this.initialSquares - this.squares.length; i++) {
+      const newSquare = new Square(
+        Math.round(Math.random() * (this.width / this.cellSize)),
+        Math.round(Math.random() * (this.height / this.cellSize))
+      );
+
+      for (let square of this.squares) {
+        if (square.posX === newSquare.posX && square.posY === newSquare.posY) {
+          newSquare.state = DEAD;
+        }
+      }
+
+      if (newSquare.state === LIVE) {
+        this.squares.push(newSquare);
+      }
     }
   }
 
@@ -96,8 +106,8 @@ class Game {
     for (let square of this.squares) {
       this.context.fillStyle = this.green;
       this.context.fillRect(
-        square.posX,
-        square.posY,
+        square.posX * this.cellSize,
+        square.posY * this.cellSize,
         this.cellSize,
         this.cellSize
       );
@@ -107,31 +117,52 @@ class Game {
   }
 
   updateSquares() {
-    for (let square of this.squares) {
-      square.detectNeighbours(this.squares);
-    }
+    /*
+
+    Add code to triangulate new squares
+    Certain patterns?
+
+    For square;
+    - Get all neighbours within 2 squares
+
+    */
 
     for (let square of this.squares) {
+      square.detectNeighbours(this.squares);
+
       if (square.neighbours.length > 3 || square.neighbours.length < 2) {
         square.state = DEAD;
       }
     }
-  }
 
-  clearSquares() {
-    const liveSquares = this.squares.filter((square) => square.state === LIVE);
+    /* 
+
+    Remove section below
+
+    Instead;
+    - Mark squares LIVE or DEAD
+    - In drawSquares()
+      - Draw fillRect if square is LIVE
+      - Draw clearRect if square is DEAD, remove from this.squares
+
+    */
+
+    const liveSquares = this.squares.filter((square) => {
+      return square.state === LIVE;
+    });
+
     this.squares = liveSquares;
   }
 
   gameLoop() {
     this.clearCanvas();
     this.drawSquares();
-    this.updateSquares();
-    this.clearSquares();
 
     if (this.squares.length === 0) {
       clearInterval(this.running);
     }
+
+    this.updateSquares();
   }
 
   run() {
@@ -144,5 +175,5 @@ class Game {
   }
 }
 
-const game = new Game(2, 10, 500);
+const game = new Game(1, 10, 2000);
 game.run();
