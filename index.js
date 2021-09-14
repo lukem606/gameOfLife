@@ -1,8 +1,8 @@
 const LIVE = "LIVE";
 const DEAD = "DEAD";
-const WIDTH = window.innerWidth;
-const HEIGHT = window.innerHeight;
 const PAD = 20; // Padding of body element
+const WIDTH = window.innerWidth - PAD * 2;
+const HEIGHT = window.innerHeight - PAD * 2;
 
 // Co-ordinates for neighbour squares
 const NEIGHBOUR_POSITIONS = [
@@ -57,9 +57,9 @@ class Square {
 
       if (
         otherX >= 0 &&
-        otherX < Math.floor(WIDTH / cellSize) &&
+        otherX < WIDTH / cellSize &&
         otherY >= 0 &&
-        otherY < Math.floor(HEIGHT / cellSize)
+        otherY < HEIGHT / cellSize
       ) {
         returnArray.push(cellArray[this.getIndex(otherX, otherY, cellSize)]);
       }
@@ -86,8 +86,8 @@ class Game {
     this.white = "rgb(255, 255, 255)";
     this.green = "rgb(3, 160, 98)";
     this.canvas = document.getElementById("gameCanvas");
-    this.canvas.width = WIDTH - (WIDTH % this.cellSize) - PAD * 2;
-    this.canvas.height = HEIGHT - (HEIGHT % this.cellSize) - PAD * 2;
+    this.canvas.width = WIDTH - (WIDTH % this.cellSize);
+    this.canvas.height = HEIGHT - (HEIGHT % this.cellSize);
     this.context = this.canvas.getContext("2d");
     this.squaresAdded = [];
     this.squaresRemoved = [];
@@ -99,8 +99,8 @@ class Game {
    */
   drawGrid() {
     const grid = document.getElementById("gridCanvas");
-    grid.width = WIDTH - (WIDTH % this.cellSize) - PAD * 2;
-    grid.height = HEIGHT - (HEIGHT % this.cellSize) - PAD * 2;
+    grid.width = WIDTH - (WIDTH % this.cellSize);
+    grid.height = HEIGHT - (HEIGHT % this.cellSize);
     const gridContext = grid.getContext("2d");
 
     gridContext.beginPath();
@@ -179,18 +179,8 @@ class Game {
     this.context.beginPath();
     this.context.fillStyle = this.green;
 
-    this.squaresAdded.forEach((square) => {
-      this.context.fillRect(
-        square.posX * this.cellSize,
-        square.posY * this.cellSize,
-        this.cellSize,
-        this.cellSize
-      );
-    });
-
-    this.squaresAdded = [];
-
     this.squaresRemoved.forEach((square) => {
+      square.state = DEAD;
       this.context.clearRect(
         square.posX * this.cellSize,
         square.posY * this.cellSize,
@@ -200,30 +190,38 @@ class Game {
     });
 
     this.squaresRemoved = [];
+
+    this.squaresAdded.forEach((square) => {
+      square.state = LIVE;
+      this.context.fillRect(
+        square.posX * this.cellSize,
+        square.posY * this.cellSize,
+        this.cellSize,
+        this.cellSize
+      );
+    });
+
+    this.squaresAdded = [];
   }
 
   /**
    * Updates whether cells are LIVE or DEAD based on Conway's Game of Life rules
    */
   updateSquares() {
-    const liveSquares = this.cells.filter((cell) => {
-      return cell.state === LIVE;
-    });
-
-    for (let square of liveSquares) {
-      square.getNeighbours(this.cells, this.cellSize);
-
-      console.log(square);
-
-      const totalNeighbours = square.neighbours.filter((neighbour) => {
-        return neighbour.state === LIVE;
+    this.cells.forEach((cell) => {
+      let cellNeighbours = cell.neighbours.filter((cellNeighbour) => {
+        return cellNeighbour.state === LIVE;
       });
 
-      if (totalNeighbours < 2 || totalNeighbours > 3) {
-        square.state = DEAD;
-        this.squaresRemoved.push(square);
+      if (
+        (cell.state === LIVE && cellNeighbours.length < 2) ||
+        (cell.state === LIVE && cellNeighbours.length > 3)
+      ) {
+        this.squaresRemoved.push(cell);
+      } else if (cell.state === DEAD && cellNeighbours.length === 3) {
+        this.squaresAdded.push(cell);
       }
-    }
+    });
   }
 
   /**
@@ -247,7 +245,7 @@ class Game {
    * Starts game.
    */
   run() {
-    document.querySelector("body").style.padding = `${20}px`;
+    document.querySelector("body").style.padding = `${PAD}px`;
     this.drawGrid();
     this.createCells();
 
@@ -257,5 +255,11 @@ class Game {
   }
 }
 
-const game = new Game(1, 10, 5000);
+// Initialise game variables
+const fps = 10;
+const cellSize = 10;
+const totalCells = 2000;
+
+// GOOOOOOO
+const game = new Game(fps, cellSize, totalCells);
 game.run();
