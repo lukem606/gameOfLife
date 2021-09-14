@@ -2,6 +2,18 @@ const LIVE = "LIVE";
 const DEAD = "DEAD";
 const WIDTH = window.innerWidth;
 const HEIGHT = window.innerHeight;
+const PAD = 20;
+
+const neighbourPositions = [
+  [-1, -1],
+  [0, -1],
+  [1, -1],
+  [-1, 0],
+  [1, 0],
+  [-1, 1],
+  [0, 1],
+  [1, 1],
+];
 
 class Square {
   constructor(posX, posY) {
@@ -18,20 +30,9 @@ class Square {
   getNeighbours(cellArray, cellSize) {
     const returnArray = [];
 
-    const indices = [
-      [-1, -1],
-      [0, -1],
-      [1, -1],
-      [-1, 0],
-      [1, 0],
-      [-1, 1],
-      [0, 1],
-      [1, 1],
-    ];
-
-    for (let i = 0; i < indices.length; i++) {
-      let otherX = this.posX + indices[i][0];
-      let otherY = this.posY + indices[i][1];
+    for (let i = 0; i < neighbourPositions.length; i++) {
+      let otherX = this.posX + neighbourPositions[i][0];
+      let otherY = this.posY + neighbourPositions[i][1];
 
       if (
         otherX >= 0 &&
@@ -55,8 +56,8 @@ class Game {
     this.white = "rgb(255, 255, 255)";
     this.green = "rgb(3, 160, 98)";
     this.canvas = document.getElementById("gameCanvas");
-    this.canvas.width = WIDTH;
-    this.canvas.height = HEIGHT;
+    this.canvas.width = WIDTH - (WIDTH % this.cellSize) - PAD * 2;
+    this.canvas.height = HEIGHT - (HEIGHT % this.cellSize) - PAD * 2;
     this.context = this.canvas.getContext("2d");
     this.squaresAdded = [];
     this.squaresRemoved = [];
@@ -65,8 +66,8 @@ class Game {
 
   drawGrid() {
     const grid = document.getElementById("gridCanvas");
-    grid.width = WIDTH;
-    grid.height = HEIGHT;
+    grid.width = WIDTH - (WIDTH % this.cellSize) - PAD * 2;
+    grid.height = HEIGHT - (HEIGHT % this.cellSize) - PAD * 2;
     const gridContext = grid.getContext("2d");
 
     gridContext.beginPath();
@@ -154,7 +155,7 @@ class Game {
       );
     });
 
-    this.squareRemoved = [];
+    this.squaresRemoved = [];
   }
 
   updateSquares() {
@@ -165,12 +166,15 @@ class Game {
     for (let square of liveSquares) {
       square.getNeighbours(this.cells, this.cellSize);
 
+      console.log(square);
+
       const totalNeighbours = square.neighbours.filter((neighbour) => {
-        neighbour.state === LIVE;
+        return neighbour.state === LIVE;
       });
 
       if (totalNeighbours < 2 || totalNeighbours > 3) {
         square.state = DEAD;
+        this.squaresRemoved.push(square);
       }
     }
   }
@@ -180,7 +184,7 @@ class Game {
 
     if (
       this.cells.filter((cell) => {
-        return cell.state === DEAD;
+        return cell.state === LIVE;
       }).length === 0
     ) {
       clearInterval(this.running);
@@ -190,6 +194,7 @@ class Game {
   }
 
   run() {
+    document.querySelector("body").style.padding = `${20}px`;
     this.drawGrid();
     this.createCells();
 
@@ -199,7 +204,7 @@ class Game {
   }
 }
 
-const game = new Game(1, 10, 1000);
+const game = new Game(1, 10, 5000);
 game.run();
 
 /*
