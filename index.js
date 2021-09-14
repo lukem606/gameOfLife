@@ -40,7 +40,7 @@ class Square {
    * @returns Index derived from x and y
    */
   getIndex(x, y, size) {
-    return y * (WIDTH / size) + x;
+    return y * Math.ceil(WIDTH / size) + x;
   }
 
   /**
@@ -85,6 +85,7 @@ class Game {
     this.black = "rgb(0, 0, 0)";
     this.white = "rgb(255, 255, 255)";
     this.green = "rgb(3, 160, 98)";
+    //this.green = "rgb(135, 206, 235)";
     this.canvas = document.getElementById("gameCanvas");
     this.canvas.width = WIDTH - (WIDTH % this.cellSize);
     this.canvas.height = HEIGHT - (HEIGHT % this.cellSize);
@@ -257,8 +258,8 @@ class Game {
 
 // Initialise game variables
 const fps = 10;
-const cellSize = 10;
-const totalCells = 2000;
+const cellSize = 8;
+const totalCells = 3000;
 
 // GOOOOOOO
 const game = new Game(fps, cellSize, totalCells);
